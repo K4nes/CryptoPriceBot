@@ -67,7 +67,8 @@ bot.command('start', async (ctx) => {
     '/price 0.5 SOL - Get price of 0.5 SOL in USD\n' +
     '/price 1 BTC -eth - Get 1 BTC in USD and ETH\n' +
     '/price 1 BTC -idr,eur - Get 1 BTC in USD, IDR, and EUR\n\n' +
-    'Example: /price 0.5 BTC -idr'
+    'Example: /price 0.5 BTC -idr',
+    { reply_parameters: { message_id: ctx.msg.message_id } }
   );
 });
 
@@ -111,7 +112,8 @@ bot.command('price', async (ctx) => {
       '  /price btc              → 1 BTC = $67000 USD\n' +
       '  /price 0.5 sol          → 0.5 SOL = $42 USD\n' +
       '  /price solana -idr      → 1 SOL = $84 USD (Solana)\n' +
-      '                           → 1 SOL = Rp 1350000 IDR (Solana)'
+      '                           → 1 SOL = Rp 1350000 IDR (Solana)',
+      { reply_parameters: { message_id: ctx.msg.message_id } }
     );
     return;
   }
@@ -143,10 +145,14 @@ bot.command('price', async (ctx) => {
       lines.push(`Not found: ${missing.join(', ')}`);
     }
 
-    await ctx.reply(lines.join('\n'));
+    await ctx.reply(lines.join('\n'), {
+      reply_parameters: { message_id: ctx.msg.message_id }
+    });
   } catch (error) {
     console.error('CMC API Error:', error.response?.data || error.message);
-    await ctx.reply('Failed to fetch price data. Please try again later.');
+    await ctx.reply('Failed to fetch price data. Please try again later.', {
+      reply_parameters: { message_id: ctx.msg.message_id }
+    });
   }
 });
 
