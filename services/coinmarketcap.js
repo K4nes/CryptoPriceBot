@@ -163,23 +163,6 @@ class CoinmarketcapService {
     }
   }
 
-  // Search by name - broader search when slug exact match fails
-  async searchByName(name) {
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      try {
-        const response = await client.get(url, { params });
-        return response;
-      } catch (err) {
-        if (attempt === retries) throw err;
-        if (err.response?.status === 429 || err.code === 'ECONNABORTED') {
-          await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, attempt)));
-        } else {
-          throw err;
-        }
-      }
-    }
-  }
-
   async getQuotes(symbols, convert = config.coinmarketcap.defaultCurrency) {
     const symbolList = Array.isArray(symbols) ? symbols.join(',') : symbols;
     const response = await this.proClient.get('/v1/cryptocurrency/quotes/latest', {
@@ -538,10 +521,8 @@ class CoinmarketcapService {
             }
 
             try {
-              const resp = await this.fetchWithRetry(this.proClient, '/v1/cryptocurrency/quotes/latest', {
-                id: candidate.id,
-                convert: currency,
-                skip_invalid: true,
+              const resp = await this.proClient.get('/v1/cryptocurrency/quotes/latest', {
+                params: { id: candidate.id, convert: currency, skip_invalid: true },
               });
 
               const quote = resp.data.data[candidate.id]?.quote?.[currency];
@@ -585,7 +566,7 @@ class CoinmarketcapService {
               ? { id: entry.id, convert: currency, skip_invalid: true }
               : { symbol: entry.symbol.toLowerCase(), convert: currency, skip_invalid: true };
 
-            const resp = await this.fetchWithRetry(this.proClient, '/v1/cryptocurrency/quotes/latest', params);
+            const resp = await this.proClient.get('/v1/cryptocurrency/quotes/latest', { params });
 
             const quote = entry.id
               ? resp.data.data[entry.id]?.quote?.[currency]
