@@ -18,6 +18,13 @@ Start the bot:
 npm start
 ```
 
+Run tests:
+```bash
+npm test
+```
+
+In Telegram, the **slash command menu** (descriptions for `/start`, `/help`, `/price`) is set automatically on startup. While a `/price` request is fetching data from CoinMarketCap, the bot may show a **typing** indicator. Very long answers are split across **up to three** messages so they stay within Telegram’s per-message length limit.
+
 ## Commands
 
 ### Get help with all commands
@@ -91,11 +98,7 @@ PROS (Pharos)
 
 ## First-Time Users
 
-First-time users receive a welcome message:
-```
-👋 Welcome! I'm CryptoPriceBot.
-Use /help to see available commands.
-```
+`/start` sends a short welcome, then the same **command help** text as `/help` (format, flags, and examples).
 
 ## Rate Limits
 

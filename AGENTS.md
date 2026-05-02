@@ -28,14 +28,15 @@ Run tests: `npm test` (Node built-in test runner, `tests/*.test.js`).
 ## Architecture
 
 ```
-bot.js                    # Telegram bot entry, registers commands
+bot.js                    # Telegram bot entry: commands, middleware, startup/shutdown
 commands/
   start.js               # /start: welcome + HELP_MESSAGE (same body as /help)
   help.js                # /help command handler
-  price.js               # /price command handler
+  price.js               # /price: typing action, CMC fetch, chunked replies
 utils/
   argParser.js           # Parses /price args: amount, symbol tokens, -currencies
   formatters.js          # Price and change formatting, input validation
+  telegramChunks.js      # Split /price text for Telegram 4096 limit (max 3 messages + truncation note)
   rateLimiter.js         # Per-user rate limiting (env-configurable)
   logger.js              # Logging with rotation (logs/bot.log)
   cache.js               # 30s TTL cache for API responses
@@ -46,9 +47,19 @@ constants/
   currencies.js          # Currency symbols mapping
 services/
   coinmarketcap.js       # CMC API calls, symbol/slug resolution
-tests/                   # Node:test unit tests (argParser, formatters, cache)
+tests/                   # Node:test (argParser, formatters, cache, telegramChunks)
 config.js                # API keys and base URLs from .env
 ```
+
+## Startup and Telegram UX
+
+On launch, `bot.js`:
+
+1. Registers the command menu with `setMyCommands` for **global** scopes: `default`, `all_private_chats`, `all_group_chats`, and `all_chat_administrators` (same `/start`, `/help`, `/price` descriptions in DMs and groups).
+2. Calls `getMe`; logs bot `id` and `username`, and **exits** if the token is invalid (before long polling starts).
+3. Starts the bot (`bot.start()`).
+
+For `/price`, after validation the handler sends a **typing** chat action before calling CoinMarketCap, then sends the reply text split across up to **three** messages if needed (Telegram’s 4096-character limit per message), with a short truncation note if content was cut.
 
 ## Rate Limiting
 

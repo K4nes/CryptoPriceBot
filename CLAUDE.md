@@ -18,9 +18,13 @@ npm start
 
 ## Architecture
 
-**Entry point:** `bot.js` — initializes Grammy bot, registers command handlers, sets up middleware and graceful shutdown.
+**Entry point:** `bot.js` — initializes Grammy bot, registers command handlers, sets up middleware and graceful shutdown. On startup it registers `setMyCommands` for global scopes (`default`, `all_private_chats`, `all_group_chats`, `all_chat_administrators`), runs `getMe` (exit on failure), then starts polling.
 
 **Parsing:** `utils/argParser.js` — `parsePriceArgs` for `/price` (strict numeric amount, `-IDR,EUR` style currencies, preserves case for addresses/symbols).
+
+**Long replies:** `utils/telegramChunks.js` — `prepareTelegramReplyChunks` caps `/price` output at three Telegram messages (4096 chars each) and appends a truncation note if needed.
+
+**`/price` UX:** `commands/price.js` sends `replyWithChatAction('typing')` before the CMC request (failures ignored).
 
 **Two API clients** in `services/coinmarketcap.js`:
 - `proClient` → `https://pro-api.coinmarketcap.com` (v1 endpoints: map, quotes, listings, DEX search)
@@ -45,4 +49,4 @@ npm start
 
 - Logs to `logs/bot.log` with 5MB rotation
 - Levels: ERROR, WARN, INFO, DEBUG via `LOG_LEVEL` env (default: INFO)
-- Slow requests (>100ms) are logged; rate limit triggers and startup/shutdown also logged
+- Slow requests (>100ms) are logged; rate limit triggers and startup/shutdown also logged; successful command menu registration logs the list of scope types

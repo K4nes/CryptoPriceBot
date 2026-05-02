@@ -4,6 +4,7 @@ const { isRateLimited } = require('../utils/rateLimiter');
 const { apiErrorHandler } = require('../middleware/errorHandler');
 const { RATE_LIMIT_EXCEEDED, PRICE_HELP } = require('../utils/messages');
 const { parsePriceArgs } = require('../utils/argParser');
+const { prepareTelegramReplyChunks } = require('../utils/telegramChunks');
 
 function registerPrice(bot) {
   bot.command('price', async (ctx) => {
@@ -52,6 +53,11 @@ function registerPrice(bot) {
       : ['USD'];
 
     try {
+      try {
+        await ctx.replyWithChatAction('typing');
+      } catch {
+        /* ignore chat action failures */
+      }
       const results = await coinmarketcap.getQuotesBySymbolOrSlug(symbols, convertCurrencies);
       const validData = results.data;
       const lines = [];
@@ -120,9 +126,12 @@ function registerPrice(bot) {
         lines.push(`Not found: ${missing.join(', ')}`);
       }
 
-      await ctx.reply(lines.join('\n'), {
-        reply_parameters: { message_id: ctx.msg.message_id }
-      });
+      const fullText = lines.join('\n');
+      const { chunks } = prepareTelegramReplyChunks(fullText);
+      const replyToUser = { reply_parameters: { message_id: ctx.msg.message_id } };
+      for (let i = 0; i < chunks.length; i++) {
+        await ctx.reply(chunks[i], i === 0 ? replyToUser : {});
+      }
     } catch (error) {
       await apiErrorHandler(error, ctx);
     }
