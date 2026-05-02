@@ -14,10 +14,13 @@ npm start
 ## Commands
 
 - `npm start` — Start the bot (node bot.js)
+- `npm test` — Run `tests/*.test.js` with Node’s built-in test runner
 
 ## Architecture
 
 **Entry point:** `bot.js` — initializes Grammy bot, registers command handlers, sets up middleware and graceful shutdown.
+
+**Parsing:** `utils/argParser.js` — `parsePriceArgs` for `/price` (strict numeric amount, `-IDR,EUR` style currencies, preserves case for addresses/symbols).
 
 **Two API clients** in `services/coinmarketcap.js`:
 - `proClient` → `https://pro-api.coinmarketcap.com` (v1 endpoints: map, quotes, listings, DEX search)

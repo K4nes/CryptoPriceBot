@@ -6,6 +6,9 @@ node_modules/
 .env.local
 .env.*.local
 
+# Claude Code (machine-specific; do not commit)
+.claude/settings.local.json
+
 # Logs
 logs/
 *.log
@@ -17,8 +20,8 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Test files
+# Ad-hoc local scripts
 test_canton.js
 
-# Agent documentation
-AGENTS.md
+# Runtime user list (no longer used by the bot)
+users.json

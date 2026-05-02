@@ -7,7 +7,14 @@ function formatPrice(price) {
   if (typeof price !== 'number' || isNaN(price) || !isFinite(price)) {
     return 'N/A';
   }
-  return price < 1 ? price.toFixed(8).replace(/\.?0+$/, '') : price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (price === 0) return '0';
+  const abs = Math.abs(price);
+  if (abs < 1) {
+    // Sub-satoshi values would round to 0 at 8 decimals; fall back to exponential.
+    if (abs < 1e-8) return price.toExponential(4);
+    return price.toFixed(8).replace(/\.?0+$/, '');
+  }
+  return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function getCurrencySymbol(currency) {
@@ -25,6 +32,21 @@ function getChangeEmoji(percent) {
   return percent >= 0 ? '📈' : '📉';
 }
 
+function countDecimals(num) {
+  if (Number.isInteger(num)) return 0;
+  const str = num.toString();
+  if (!/e/i.test(str)) {
+    const frac = str.split('.')[1];
+    return frac ? frac.length : 0;
+  }
+  // Exponential form (e.g. "1e-9" or "1.5e-8") bypasses the simple split.
+  const [mantissa, expPart] = str.toLowerCase().split('e');
+  const expNum = parseInt(expPart, 10);
+  const dotIdx = mantissa.indexOf('.');
+  const mantissaDecimals = dotIdx >= 0 ? mantissa.length - dotIdx - 1 : 0;
+  return Math.max(0, mantissaDecimals - expNum);
+}
+
 function validateAmount(amount) {
   if (typeof amount !== 'number' || isNaN(amount)) {
     return { valid: false, message: 'Amount must be a valid number' };
@@ -35,8 +57,7 @@ function validateAmount(amount) {
   if (amount > MAX_AMOUNT) {
     return { valid: false, message: 'Amount is too large (max: 1 trillion)' };
   }
-  const decimalParts = amount.toString().split('.');
-  if (decimalParts[1] && decimalParts[1].length > MAX_DECIMAL_PLACES) {
+  if (countDecimals(amount) > MAX_DECIMAL_PLACES) {
     return { valid: false, message: 'Amount can have max 8 decimal places' };
   }
   return { valid: true };

@@ -49,6 +49,7 @@ function cleanup() {
   }
 }
 
-setInterval(cleanup, CACHE_TTL / 2);
+const cleanupTimer = setInterval(cleanup, CACHE_TTL / 2);
+if (typeof cleanupTimer.unref === 'function') cleanupTimer.unref();
 
 module.exports = { get, set, CACHE_TTL };

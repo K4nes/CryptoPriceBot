@@ -4,6 +4,7 @@ const path = require('path');
 const LOG_DIR = path.join(__dirname, '..', 'logs');
 const LOG_FILE = path.join(LOG_DIR, 'bot.log');
 const MAX_LOG_SIZE = 5 * 1024 * 1024; // 5MB
+const ROTATE_CHECK_INTERVAL_MS = 60 * 1000;
 
 const LOG_LEVELS = {
   ERROR: 0,
@@ -24,20 +25,40 @@ function ensureLogDir() {
   }
 }
 
-function rotateLogIfNeeded() {
+ensureLogDir();
+
+let stream = openStream();
+
+function openStream() {
   try {
-    if (!fs.existsSync(LOG_FILE)) return;
-    
-    const stats = fs.statSync(LOG_FILE);
-    if (stats.size >= MAX_LOG_SIZE) {
-      const date = new Date().toISOString().split('T')[0];
-      const archivePath = path.join(LOG_DIR, `bot-${date}.log`);
-      fs.renameSync(LOG_FILE, archivePath);
-    }
+    const s = fs.createWriteStream(LOG_FILE, { flags: 'a' });
+    s.on('error', (err) => {
+      console.error('Log stream error:', err.message);
+    });
+    return s;
   } catch (err) {
-    console.error('Log rotation failed:', err.message);
+    console.error('Failed to open log stream:', err.message);
+    return null;
   }
 }
+
+function rotateIfNeeded() {
+  fs.stat(LOG_FILE, (err, stats) => {
+    if (err || !stats || stats.size < MAX_LOG_SIZE) return;
+    const date = new Date().toISOString().split('T')[0];
+    const archivePath = path.join(LOG_DIR, `bot-${date}.log`);
+    const oldStream = stream;
+    stream = null;
+    if (oldStream) oldStream.end();
+    fs.rename(LOG_FILE, archivePath, (renameErr) => {
+      if (renameErr) console.error('Log rotation rename failed:', renameErr.message);
+      stream = openStream();
+    });
+  });
+}
+
+const rotateTimer = setInterval(rotateIfNeeded, ROTATE_CHECK_INTERVAL_MS);
+if (typeof rotateTimer.unref === 'function') rotateTimer.unref();
 
 function formatMessage(level, message, meta = {}) {
   const timestamp = new Date().toISOString();
@@ -45,27 +66,22 @@ function formatMessage(level, message, meta = {}) {
   return `[${timestamp}] [${level}] ${message} ${metaStr}`.trim();
 }
 
-function log(level, levelName, message, meta = {}) {
+function log(levelName, message, meta = {}) {
   if (LOG_LEVELS[levelName] > CURRENT_LEVEL) return;
-  
-  ensureLogDir();
-  rotateLogIfNeeded();
-  
+
   const formatted = formatMessage(levelName, message, meta);
   console.log(formatted);
-  
-  try {
-    fs.appendFileSync(LOG_FILE, formatted + '\n');
-  } catch (err) {
-    console.error('Failed to write to log file:', err.message);
+
+  if (stream) {
+    stream.write(formatted + '\n');
   }
 }
 
 const logger = {
-  error: (message, meta = {}) => log('ERROR', 'ERROR', message, meta),
-  warn: (message, meta = {}) => log('WARN', 'WARN', message, meta),
-  info: (message, meta = {}) => log('INFO', 'INFO', message, meta),
-  debug: (message, meta = {}) => log('DEBUG', 'DEBUG', message, meta),
+  error: (message, meta = {}) => log('ERROR', message, meta),
+  warn: (message, meta = {}) => log('WARN', message, meta),
+  info: (message, meta = {}) => log('INFO', message, meta),
+  debug: (message, meta = {}) => log('DEBUG', message, meta),
 };
 
 module.exports = logger;

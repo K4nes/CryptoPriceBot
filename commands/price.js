@@ -1,21 +1,14 @@
 const coinmarketcap = require('../services/coinmarketcap');
 const { formatPrice, getCurrencySymbol, formatChange, getChangeEmoji, validateAmount, validateSymbol } = require('../utils/formatters');
-const { isNewUser, markUserSeen } = require('../utils/userTracker');
 const { isRateLimited } = require('../utils/rateLimiter');
 const { apiErrorHandler } = require('../middleware/errorHandler');
-const { WELCOME_MESSAGE, RATE_LIMIT_EXCEEDED, PRICE_HELP } = require('../utils/messages');
+const { RATE_LIMIT_EXCEEDED, PRICE_HELP } = require('../utils/messages');
+const { parsePriceArgs } = require('../utils/argParser');
 
 function registerPrice(bot) {
   bot.command('price', async (ctx) => {
     const chatId = ctx.msg.chat.id;
-    
-    if (await isNewUser(chatId)) {
-      await markUserSeen(chatId);
-      await ctx.reply(WELCOME_MESSAGE, {
-        reply_parameters: { message_id: ctx.msg.message_id }
-      });
-    }
-    
+
     const rateCheck = isRateLimited(chatId);
     if (rateCheck.limited) {
       await ctx.reply(RATE_LIMIT_EXCEEDED(rateCheck.retryAfter), {
@@ -24,25 +17,8 @@ function registerPrice(bot) {
       return;
     }
 
-    const args = ctx.message.text.split(' ').slice(1);
-
-    let amount = 1;
-    const symbolArgs = [];
-    const targetCurrencies = [];
-
-    for (const arg of args) {
-      if (arg.startsWith('-')) {
-        const currencies = arg.slice(1).split(',');
-        targetCurrencies.push(...currencies.map(c => c.toUpperCase().trim()));
-      } else {
-        const parsed = parseFloat(arg);
-        if (!isNaN(parsed) && symbolArgs.length === 0) {
-          amount = parsed;
-        } else {
-          symbolArgs.push(arg.toUpperCase().trim());
-        }
-      }
-    }
+    const args = ctx.message.text.split(/\s+/).slice(1).filter(Boolean);
+    const { amount, symbolArgs, targetCurrencies } = parsePriceArgs(args);
 
     const amountValidation = validateAmount(amount);
     if (!amountValidation.valid) {
@@ -148,7 +124,7 @@ function registerPrice(bot) {
         reply_parameters: { message_id: ctx.msg.message_id }
       });
     } catch (error) {
-      apiErrorHandler(error, ctx);
+      await apiErrorHandler(error, ctx);
     }
   });
 }

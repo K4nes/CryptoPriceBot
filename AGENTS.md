@@ -11,6 +11,8 @@ cp .env.example .env
 npm start
 ```
 
+Run tests: `npm test` (Node built-in test runner, `tests/*.test.js`).
+
 ## Commands
 
 - `/price BTC` → `1 BTC = [price] USD (Bitcoin)`
@@ -18,6 +20,7 @@ npm start
 - `/price solana` → `1 SOL = [price] USD (Solana)` (resolves name to symbol)
 - `/price 333 cc -idr` → 333 CC in USD AND IDR
 - `/price 1 btc -eth` → 1 BTC in USD and ETH
+- `/start` → Short welcome, then the same command help as `/help`
 - `/help` → Shows available commands with examples
 
 **Format:** `/price <amount> <symbol> [-target_currency1,target_currency2]`
@@ -27,12 +30,12 @@ npm start
 ```
 bot.js                    # Telegram bot entry, registers commands
 commands/
-  start.js               # /start command handler
+  start.js               # /start: welcome + HELP_MESSAGE (same body as /help)
   help.js                # /help command handler
   price.js               # /price command handler
 utils/
+  argParser.js           # Parses /price args: amount, symbol tokens, -currencies
   formatters.js          # Price and change formatting, input validation
-  userTracker.js         # First-time user tracking (users.json)
   rateLimiter.js         # Per-user rate limiting (env-configurable)
   logger.js              # Logging with rotation (logs/bot.log)
   cache.js               # 30s TTL cache for API responses
@@ -43,6 +46,7 @@ constants/
   currencies.js          # Currency symbols mapping
 services/
   coinmarketcap.js       # CMC API calls, symbol/slug resolution
+tests/                   # Node:test unit tests (argParser, formatters, cache)
 config.js                # API keys and base URLs from .env
 ```
 
