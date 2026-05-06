@@ -20,7 +20,7 @@ Run tests: `npm test` (Node built-in test runner, `tests/*.test.js`).
 - `/price solana` → `1 SOL = [price] USD (Solana)` (resolves name to symbol)
 - `/price 333 cc -idr` → 333 CC in USD AND IDR
 - `/price 1 btc -eth` → 1 BTC in USD and ETH
-- `/start` → Short welcome, then the same command help as `/help`
+- `/start` → Short welcome, then same command help as `/help`
 - `/help` → Shows available commands with examples
 
 **Format:** `/price <amount> <symbol> [-target_currency1,target_currency2]`
@@ -55,11 +55,11 @@ config.js                # API keys and base URLs from .env
 
 On launch, `bot.js`:
 
-1. Registers the command menu with `setMyCommands` for **global** scopes: `default`, `all_private_chats`, `all_group_chats`, and `all_chat_administrators` (same `/start`, `/help`, `/price` descriptions in DMs and groups).
-2. Calls `getMe`; logs bot `id` and `username`, and **exits** if the token is invalid (before long polling starts).
-3. Starts the bot (`bot.start()`).
+1. Registers command menu with `setMyCommands` for **global** scopes: `default`, `all_private_chats`, `all_group_chats`, `all_chat_administrators` (same `/start`, `/help`, `/price` descriptions in DMs and groups).
+2. Calls `getMe`; logs bot `id` and `username`; **exits** if token invalid (before long polling starts).
+3. Starts bot (`bot.start()`).
 
-For `/price`, after validation the handler sends a **typing** chat action before calling CoinMarketCap, then sends the reply text split across up to **three** messages if needed (Telegram’s 4096-character limit per message), with a short truncation note if content was cut.
+For `/price`, after validation handler sends **typing** chat action before calling CoinMarketCap; sends reply text split across up to **three** messages if needed (Telegram's 4096-character limit per message), with short truncation note if content was cut.
 
 ## Rate Limiting
 
@@ -76,7 +76,7 @@ For `/price`, after validation the handler sends a **typing** chat action before
 
 ## Response Time Monitoring
 
-- Requests > 100ms are logged: `[INFO] Request completed in XXXms`
+- Requests > 100ms logged: `[INFO] Request completed in XXXms`
 - Helps identify slow responses and API issues
 
 ## Error Handling
@@ -96,22 +96,29 @@ For `/price`, after validation the handler sends a **typing** chat action before
 - Symbol-like input (1-5 letters, e.g. "SOL", "CC") → `getCoinId` via `/v1/cryptocurrency/map` (returns top 3 ranked matches)
 - Name-like input (e.g. "solana", "canton") → DEX search → market-pairs → listings fallback → slug lookup
 
-**Multiple candidates:** When a symbol matches multiple tokens (e.g., CC, PROS), resolved with `candidates` array, sorted by CMC rank. Quote fetching uses `candidate.id` in cache key to avoid collisions (e.g., `pros_usd_37263` vs `pros_usd_28945`).
+**Multiple candidates:** When symbol matches multiple tokens (e.g., CC, PROS), resolved with `candidates` array, sorted by CMC rank. Quote fetching uses `candidate.id` in cache key to avoid collisions (e.g., `pros_usd_37263` vs `pros_usd_28945`).
 
 **Slug and symbol params always lowercase:** API rejects uppercase slugs and symbol params.
 
-**Multi-currency:** Each currency requires a separate API call. USD is always fetched first; target currencies appended via `-idr`, `-eur`, etc.
+**Multi-currency:** Each currency requires separate API call. USD fetched first; target currencies appended via `-idr`, `-eur`, etc.
+
+**Cache key includes `id`:** `cache.get(symbol, currency, id)` ensures different tokens with same symbol have separate entries.
 
 ## Caching
 
 - **30 second TTL cache** for CMC API responses (`utils/cache.js`)
-- Cache key: `symbol_currency_id` (id is optional, only used when available to avoid collisions)
+- Cache key: `symbol_currency_id` (id optional, only used when available to avoid collisions)
 - Reduces API calls, improves response time
 
 ## Input Validation
 
 - Amount: must be > 0, max 8 decimal places, max 1 trillion
 - Symbol: max 50 characters, alphanumeric + spaces + hyphens only
+
+## Commands Reference
+
+- `npm start` — Start bot (`node bot.js`)
+- `npm test` — Run `tests/*.test.js` with Node's built-in test runner
 
 ## Dependencies
 

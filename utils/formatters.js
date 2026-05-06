@@ -70,7 +70,7 @@ function validateSymbol(symbol) {
   if (symbol.length > 50) {
     return { valid: false, message: 'Symbol is too long (max: 50 characters)' };
   }
-  if (!/^[A-Za-z0-9\s-]+$/.test(symbol)) {
+  if (!/^[A-Za-z0-9]+(?:[\s-][A-Za-z0-9]+)*$/.test(symbol)) {
     return { valid: false, message: 'Symbol can only contain letters, numbers, spaces, and hyphens' };
   }
   return { valid: true };

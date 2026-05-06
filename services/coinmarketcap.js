@@ -4,29 +4,41 @@ const cache = require('../utils/cache');
 const logger = require('../utils/logger');
 
 const COIN_MAP_TTL_MS = 60 * 60 * 1000; // 1 hour
-const COIN_MAP_LIMIT = 5000;
+const COIN_MAP_LIMIT = 1000;
+const MAX_RETRY = 2;
+const RETRY_DELAY_MS = 500;
+
+async function withRetry(fn, retries = MAX_RETRY) {
+  let lastErr;
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (i < retries && (err.response?.status >= 500 || !err.response)) {
+        await new Promise(r => setTimeout(r, RETRY_DELAY_MS * (i + 1)));
+        continue;
+      }
+    }
+  }
+  throw lastErr;
+}
 
 class CoinmarketcapService {
-  constructor() {
-    this.proClient = axios.create({
-      baseURL: 'https://pro-api.coinmarketcap.com',
-      headers: {
-        'X-CMC_PRO_API_KEY': config.coinmarketcap.apiKey,
-      },
-      timeout: 30000,
-    });
-
-    this.marketClient = axios.create({
-      baseURL: 'https://api.coinmarketcap.com',
-      headers: {
-        'X-CMC_PRO_API_KEY': config.coinmarketcap.apiKey,
-      },
-      timeout: 30000,
-    });
-
+  constructor(proClient, marketClient) {
+    if (!proClient || !marketClient) {
+      proClient = axios.create({ baseURL: config.coinmarketcap.baseUrl, headers: { 'X-CMC_PRO_API_KEY': config.coinmarketcap.apiKey } });
+      marketClient = axios.create({ baseURL: 'https://api.coinmarketcap.com' });
+    }
+    this.proClient = proClient;
+    this.marketClient = marketClient;
     this._coinMap = null;
     this._coinMapAt = 0;
     this._coinMapInflight = null;
+  }
+
+  static createInstance() {
+    return new CoinmarketcapService();
   }
 
   // Detect blockchain addresses. EVM: 0x + 40 hex. Solana: base58, 32-44.
@@ -199,6 +211,7 @@ class CoinmarketcapService {
     }
   }
 
+  // Returns up to 3 ranked matches. For full candidate list, call with higher limit.
   async getCoinId(symbol) {
     try {
       const resp = await this.proClient.get('/v1/cryptocurrency/map', {
@@ -342,7 +355,11 @@ class CoinmarketcapService {
     const dexTokens = await this.searchDexTokens(sym, 10);
     if (dexTokens.length === 0) return null;
 
-    const viableTokens = dexTokens.filter(t => t.liquidity > 0 && !t.tags.includes('flagged'));
+    const viableTokens = dexTokens.filter(t => {
+      if (t.liquidity <= 0) return false;
+      if (t.tags.includes('flagged')) return false;
+      return true;
+    });
     if (viableTokens.length === 0) return null;
 
     const bestMatches = viableTokens
@@ -515,7 +532,7 @@ class CoinmarketcapService {
         ? { id: entry.id, convert: missing.join(','), skip_invalid: true }
         : { symbol: entry.symbol.toLowerCase(), convert: missing.join(','), skip_invalid: true };
 
-      const resp = await this.proClient.get('/v1/cryptocurrency/quotes/latest', { params });
+      const resp = await withRetry(() => this.proClient.get('/v1/cryptocurrency/quotes/latest', { params }));
 
       const tokenData = entry.id
         ? resp.data?.data?.[entry.id]
@@ -604,4 +621,4 @@ class CoinmarketcapService {
   }
 }
 
-module.exports = new CoinmarketcapService();
+module.exports = CoinmarketcapService.createInstance();

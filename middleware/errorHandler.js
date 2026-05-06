@@ -37,9 +37,14 @@ async function apiErrorHandler(err, ctx) {
 
   let message = '❌ Failed to fetch price data. Please try again later.';
   if (status === 429) {
-    message = '⏳ API rate limit exceeded. Please try again later.';
+    const retryAfter = err.response.headers?.['retry-after'];
+    message = retryAfter
+      ? `⏳ API rate limit exceeded. Retry in ${retryAfter}s.`
+      : '⏳ API rate limit exceeded. Please try again later.';
   } else if (status === 401 || status === 403) {
     message = '⚠️ API configuration error. Contact the bot owner.';
+  } else if (status >= 500) {
+    message = '⚠️ API server error. Please try again later.';
   }
 
   try {

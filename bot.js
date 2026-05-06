@@ -1,22 +1,21 @@
 const { Bot } = require('grammy');
-const config = require('./config');
-const logger = require('./utils/logger');
+const config = require('./config.js');
+const logger = require('./utils/logger.js');
+const { registerStart } = require('./commands/start.js');
+const { registerHelp } = require('./commands/help.js');
+const { registerPrice } = require('./commands/price.js');
+const { errorHandler } = require('./middleware/errorHandler.js');
 
 const SLOW_REQUEST_THRESHOLD_MS = 100;
 
 const bot = new Bot(config.telegram.botToken);
 
-/** Shown in Telegram when the user types `/` (Bot API setMyCommands). */
 const BOT_COMMANDS = [
   { command: 'start', description: '👋 Welcome and command overview' },
   { command: 'help', description: '📖 /price format and examples' },
   { command: 'price', description: '💱 Crypto price from CoinMarketCap' },
 ];
 
-/**
- * Scopes that need no chat/user ids (BotCommandScope*).
- * @see https://core.telegram.org/bots/api#botcommandscope
- */
 const BOT_COMMAND_GLOBAL_SCOPES = [
   { type: 'default' },
   { type: 'all_private_chats' },
@@ -24,7 +23,6 @@ const BOT_COMMAND_GLOBAL_SCOPES = [
   { type: 'all_chat_administrators' },
 ];
 
-/** Registers BOT_COMMANDS for global Telegram command scopes (private, groups, admins). */
 async function registerBotCommandsMenu() {
   const scopesRegistered = [];
   for (const scope of BOT_COMMAND_GLOBAL_SCOPES) {
@@ -33,11 +31,6 @@ async function registerBotCommandsMenu() {
   }
   logger.info('Bot command menu registered with Telegram', { scopes: scopesRegistered });
 }
-
-const { registerStart } = require('./commands/start');
-const { registerHelp } = require('./commands/help');
-const { registerPrice } = require('./commands/price');
-const { errorHandler } = require('./middleware/errorHandler');
 
 bot.use(async (ctx, next) => {
   const start = Date.now();
@@ -81,7 +74,7 @@ process.on('unhandledRejection', (reason) => {
   process.exit(1);
 });
 
-(async function startBot() {
+async function startBot() {
   try {
     await registerBotCommandsMenu();
   } catch (err) {
@@ -97,4 +90,9 @@ process.on('unhandledRejection', (reason) => {
   logger.info('CryptoPriceBot starting...');
   bot.start();
   logger.info('CryptoPriceBot is running');
-})();
+}
+
+startBot().catch(err => {
+  console.error("Fatal bot start error:", err);
+  process.exit(1);
+});

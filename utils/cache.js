@@ -1,8 +1,14 @@
 const logger = require('./logger');
 
 const CACHE_TTL = 30 * 1000; // 30 seconds
+const MAX_CACHE_SIZE = 1000;
 
 const cache = new Map();
+
+function evictOldest() {
+  const firstKey = cache.keys().next().value;
+  if (firstKey !== undefined) cache.delete(firstKey);
+}
 
 function getCacheKey(symbol, currency, id = null) {
   const base = `${symbol.toLowerCase()}_${currency.toUpperCase()}`;
@@ -29,6 +35,9 @@ function get(symbol, currency, id = null) {
 
 function set(symbol, currency, data, id = null) {
   try {
+    if (cache.size >= MAX_CACHE_SIZE) {
+      evictOldest();
+    }
     const key = getCacheKey(symbol, currency, id);
     cache.set(key, { data, timestamp: Date.now() });
   } catch (err) {

@@ -48,9 +48,8 @@ function registerPrice(bot) {
       return;
     }
 
-    const convertCurrencies = targetCurrencies.length > 0
-      ? ['USD', ...targetCurrencies]
-      : ['USD'];
+    const seen = new Set();
+    const convertCurrencies = ['USD', ...targetCurrencies].filter(c => seen.has(c) ? false : seen.add(c));
 
     try {
       try {

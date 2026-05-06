@@ -102,8 +102,28 @@ PROS (Pharos)
 
 ## Rate Limits
 
-- Bot: 10 requests per minute per user
+- Bot: **10 requests per minute per user** (configurable via env)
 - CMC API: varies by plan
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RATE_LIMIT` | 10 | Max requests per user per window |
+| `RATE_WINDOW_SEC` | 60 | Rate limit window in seconds |
+| `LOG_LEVEL` | INFO | ERROR / WARN / INFO / DEBUG |
+| `TELEGRAM_BOT_TOKEN` | — | Telegram bot token (required) |
+| `CMC_API_KEY` | — | CoinMarketCap API key (required) |
+
+## Logging
+
+Set via `LOG_LEVEL` env var (default: `INFO`):
+- `ERROR` — Only errors
+- `WARN` — Errors + warnings
+- `INFO` — Errors, warnings, and startup/shutdown events
+- `DEBUG` — Everything including slow request traces
+
+Logs written to `logs/bot.log` with 5MB rotation.
 
 ## Format
 
@@ -121,6 +141,7 @@ PROS (Pharos)
 | `-jpy` | Convert to Japanese Yen |
 | `-eth` | Convert to Ethereum |
 | `-btc` | Convert to Bitcoin |
+| `-usd` | Explicitly request USD (default) |
 
 ## Examples
 
